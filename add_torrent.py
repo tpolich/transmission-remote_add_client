@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 import json
-import requests
+import urllib
+import urllib.error
+import urllib.request
 import sys
 import os
 import base64
@@ -9,14 +11,17 @@ import base64
 #load setting from the config.json file sitting in the same folder as this programs
 st = json.load(open(os.path.dirname(os.path.realpath(__file__))+'/config.json'))
 
-headers = {'content-type':'application/json'}
+headers = {
+		'content-type':'application/json',
+		'Authorization' : 'Basic ' + str(base64.b64encode(bytes(st['username'] + ':' + st['password'],'utf-8')),'utf-8'),
+	}
 payload = {'arguments': {}, 'method': 'torrent-add'}
 
 #if the file passed in has magnet:? in the name we assume it's a magnet link being passed in
 if "magnet:?" in sys.argv[1]:
 	payload['arguments']['filename'] = sys.argv[1]
+		
 	
-
 #anything else is taken as a torrent file	
 else:
 	#open the torrent file
@@ -25,12 +30,12 @@ else:
 	payload['arguments']['metainfo'] = str(base64.b64encode(f.read()))[2:][:-1]
 	f.close()
 	
-#make the add torrent POST
-r = requests.post(st['url'],auth=(st['username'],st['password']),data=json.dumps(payload),headers=headers)
 
-#if there is a 409 error get the session id and retry
-if "409: Conflict" in r.text:
-	#parsing the id out of the response. dirty but easy
-	headers['X-Transmission-Session-Id'] = r.text.split(': ')[2][:-11]
-	r = requests.post(st['url'],auth=(st['username'],st['password']),data=json.dumps(payload),headers=headers)
-	
+req = urllib.request.Request(st['url'], data=bytes(json.dumps(payload),'ascii'), headers = headers)	
+
+try:
+	urllib.request.urlopen(req)
+except urllib.error.HTTPError as error:
+	headers['X-Transmission-Session-Id'] = bytes.decode(error.read()).split(': ')[2][:-11]
+	req = urllib.request.Request(st['url'], data=bytes(json.dumps(payload),'ascii'), headers = headers)
+	urllib.request.urlopen(req)
