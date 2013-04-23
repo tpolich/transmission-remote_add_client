@@ -9,6 +9,8 @@ import base64
 #load setting from the config.json file sitting in the same folder as this programs
 st = json.load(open(os.path.dirname(os.path.realpath(__file__))+'/config.json'))
 
+print sys.argv[1]
+
 headers = {
 	'content-type':'application/json',
 	'Authorization' : 'Basic ' + str(base64.b64encode(bytes(st['username'] + ':' + st['password']))),
@@ -24,8 +26,8 @@ if "magnet:?" in sys.argv[1]:
 else:
 	#open the torrent file
 	f = open(sys.argv[1],'rb')
-	#encode the torrent file as base64, make it a string, ripe off the extra crap on the front and tail
-	payload['arguments']['metainfo'] = str(base64.b64encode(f.read()))[2:][:-1]
+	#encode the torrent file as base64, make it a string
+	payload['arguments']['metainfo'] = str(base64.b64encode(f.read()))
 	f.close()
 
 
